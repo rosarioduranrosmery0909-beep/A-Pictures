@@ -1,0 +1,1079 @@
+<!-- public/index.html -->
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>A-Pictures</title>
+
+<style>
+
+:root{
+  --pink:#ff4db8;
+  --blue:#0b4dbb;
+  --dark:#0f172a;
+  --card:#1e293b;
+  --border:#334155;
+  --text:#f8fafc;
+}
+
+*{
+  margin:0;
+  padding:0;
+  box-sizing:border-box;
+  font-family:Segoe UI;
+}
+
+body{
+  background:linear-gradient(180deg,#0f172a,#020617);
+  color:white;
+}
+
+/* LOGIN */
+
+.login-box{
+  width:350px;
+  margin:120px auto;
+  padding:30px;
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:18px;
+  text-align:center;
+}
+
+.login-box h2{
+  margin-bottom:20px;
+  font-size:42px;
+}
+
+.login-box input{
+  width:100%;
+  padding:14px;
+  margin:10px 0;
+  border-radius:10px;
+  border:1px solid var(--border);
+  background:#020617;
+  color:white;
+}
+
+.login-actions{
+  display:flex;
+  gap:10px;
+}
+
+.btn-login{
+  background:var(--blue);
+}
+
+.btn-register{
+  background:var(--pink);
+}
+
+/* HEADER */
+
+header{
+  position:fixed;
+  top:0;
+  width:100%;
+  height:70px;
+  background:#0f172a;
+  border-bottom:1px solid var(--border);
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:0 20px;
+  z-index:999;
+}
+
+.logo{
+  font-size:30px;
+  font-weight:900;
+}
+
+.logo span:first-child{
+  color:var(--pink);
+}
+
+.logo span:last-child{
+  color:var(--blue);
+}
+
+.logout-btn{
+  width:auto;
+  padding:10px 15px;
+  background:var(--pink);
+}
+
+/* LAYOUT */
+
+.main-layout{
+  display:flex;
+  max-width:1200px;
+  margin:auto;
+  gap:20px;
+}
+
+/* SIDEBAR */
+
+.sidebar{
+  width:260px;
+  background:var(--card);
+  border-right:1px solid var(--border);
+  padding:15px;
+  min-height:100vh;
+  position:sticky;
+  top:70px;
+}
+
+.sidebar h3{
+  margin-bottom:15px;
+  color:var(--pink);
+}
+
+#userSearch{
+  width:100%;
+  padding:10px;
+  border-radius:10px;
+  border:1px solid var(--border);
+  background:#020617;
+  color:white;
+  margin-bottom:15px;
+}
+
+.user-item{
+  background:#020617;
+  padding:10px;
+  border-radius:10px;
+  margin-bottom:10px;
+  cursor:pointer;
+  transition:.2s;
+
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  
+}
+
+.user-item:hover{
+  background:var(--blue);
+}
+
+/* FEED */
+
+.container{
+  flex:1;
+  max-width:650px;
+  margin:100px auto;
+  padding:15px;
+}
+
+.card{
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:15px;
+  padding:15px;
+  margin-bottom:20px;
+}
+
+textarea,input{
+  width:100%;
+  padding:12px;
+  border-radius:10px;
+  border:1px solid var(--border);
+  background:#020617;
+  color:white;
+  margin:8px 0;
+}
+
+button{
+  width:100%;
+  padding:12px;
+  border:none;
+  border-radius:10px;
+  color:white;
+  font-weight:bold;
+  cursor:pointer;
+}
+
+.publish-btn{
+  background:var(--blue);
+}
+
+.post img{
+  width:100%;
+  margin-top:12px;
+  border-radius:12px;
+  max-height:450px;
+  object-fit:cover;
+}
+
+.tags{
+  color:var(--pink);
+  margin:6px 0;
+}
+
+/* MENU */
+
+.post-header{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+}
+
+.post-menu{
+  position:relative;
+}
+
+.menu-btn{
+  width:auto;
+  background:none;
+  font-size:24px;
+  padding:4px 10px;
+}
+
+.dropdown{
+  display:none;
+  position:absolute;
+  right:0;
+  top:35px;
+  background:#020617;
+  border:1px solid var(--border);
+  border-radius:10px;
+  overflow:hidden;
+}
+
+.dropdown button{
+  background:none;
+  width:120px;
+}
+
+.dropdown button:hover{
+  background:red;
+}
+
+.post-menu.active .dropdown{
+  display:block;
+}
+
+/* RESPONSIVE */
+
+@media(max-width:900px){
+
+  .main-layout{
+    flex-direction:column;
+  }
+
+  .sidebar{
+    width:100%;
+    min-height:auto;
+    position:relative;
+    top:0;
+  }
+
+}
+
+</style>
+</head>
+
+<body>
+
+<!-- LOGIN -->
+
+<div id="loginBox" class="login-box">
+
+  <h2>A-Pictures</h2>
+
+  <input
+  type="text"
+  id="loginUser"
+  placeholder="Usuario"
+  >
+
+  <input
+  type="password"
+  id="loginPass"
+  placeholder="Contraseña"
+  >
+
+  <div class="login-actions">
+
+    <button
+    class="btn-login"
+    onclick="login()">
+      Entrar
+    </button>
+
+    <button
+    class="btn-register"
+    onclick="register()">
+      Registrar
+    </button>
+
+  </div>
+
+</div>
+
+<!-- APP -->
+
+<div id="app" style="display:none;">
+
+<header>
+
+  <div class="logo">
+    <span>A-</span><span>Pictures</span>
+  </div>
+
+  <button
+  class="logout-btn"
+  onclick="logout()">
+    Cerrar sesión
+  </button>
+
+</header>
+
+<div class="main-layout">
+
+<!-- SIDEBAR -->
+
+<div class="sidebar">
+
+  <h3>Usuarios</h3>
+
+  <input
+  type="text"
+  id="userSearch"
+  placeholder="Buscar usuario..."
+  onkeyup="renderUsers()"
+  >
+
+  <div id="usersList"></div>
+
+</div>
+
+<!-- FEED -->
+
+<div class="container">
+
+  <div class="card">
+
+    <textarea
+    id="text"
+    placeholder="¿Qué estás pensando?"
+    ></textarea>
+
+    <input
+    type="text"
+    id="tags"
+    placeholder="Etiquetas separadas por coma"
+    >
+
+    <input
+    type="file"
+    id="imageInput"
+    accept="image/*"
+    >
+
+    <button
+    class="publish-btn"
+    onclick="addPost()">
+      Publicar
+    </button>
+
+  </div>
+
+  <div id="feed"></div>
+
+</div>
+</div>
+</div>
+
+<script>
+
+let users =
+JSON.parse(localStorage.getItem("users")) || [];
+
+let posts =
+JSON.parse(localStorage.getItem("posts")) || [];
+
+let currentUser =
+JSON.parse(localStorage.getItem("currentUser"));
+
+if(currentUser){
+  showApp();
+}
+
+/* REGISTRO */
+
+function register(){
+
+  const username =
+  document.getElementById("loginUser")
+  .value.trim();
+
+  const password =
+  document.getElementById("loginPass")
+  .value.trim();
+
+  if(!username || !password){
+    return alert("Completa todos los campos");
+  }
+
+  const exists =
+  users.find(
+    user => user.username === username
+  );
+
+  if(exists){
+    return alert("Ese usuario ya existe");
+  }
+
+  users.push({
+    id:Date.now(),
+    username,
+    password
+  });
+
+  localStorage.setItem(
+    "users",
+    JSON.stringify(users)
+  );
+
+  alert("Usuario registrado");
+
+}
+
+/* LOGIN */
+
+function login(){
+
+  const username =
+  document.getElementById("loginUser")
+  .value.trim();
+
+  const password =
+  document.getElementById("loginPass")
+  .value.trim();
+
+  const user = users.find(
+    u =>
+    u.username === username &&
+    u.password === password
+  );
+
+  if(!user){
+    return alert(
+      "Usuario o contraseña incorrectos"
+    );
+  }
+
+  localStorage.setItem(
+    "currentUser",
+    JSON.stringify(user)
+  );
+
+  currentUser = user;
+
+  showApp();
+}
+
+/* APP */
+
+function showApp(){
+
+  document.getElementById("loginBox")
+  .style.display = "none";
+
+  document.getElementById("app")
+  .style.display = "block";
+
+  renderUsers();
+
+  loadPosts();
+}
+
+/* LOGOUT */
+
+function logout(){
+
+  localStorage.removeItem("currentUser");
+
+  location.reload();
+}
+
+/* PUBLICAR */
+
+function addPost(){
+
+  const text =
+  document.getElementById("text").value;
+
+  const tags =
+  document.getElementById("tags").value;
+
+  const imageInput =
+  document.getElementById("imageInput");
+
+  const file =
+  imageInput.files[0];
+
+  if(!text && !file){
+    return alert(
+      "Agrega texto o imagen"
+    );
+  }
+
+  if(file){
+
+    const reader =
+    new FileReader();
+
+    reader.onload = async function(e){
+
+  const formData =
+  new FormData();
+
+  formData.append(
+    "user",
+    currentUser.username
+  );
+
+  formData.append(
+    "text",
+    text
+  );
+
+  formData.append(
+    "tags",
+    tags
+  );
+
+  formData.append(
+    "image",
+    file
+  );
+
+  const response =
+  await fetch("/posts",{
+
+    method:"POST",
+
+    headers:{
+      Authorization:"apictures123"
+    },
+
+    body:formData
+
+  });
+
+  if(!response.ok){
+
+    return alert(
+      "Error al publicar"
+    );
+
+  }
+
+  loadPosts();
+
+};
+
+    reader.readAsDataURL(file);
+
+  }else{
+
+    savePost(null);
+
+  }
+
+  function savePost(image){
+
+    posts.unshift({
+
+      id:Date.now(),
+
+      user:
+      currentUser.username,
+
+      text,
+      tags,
+      image
+
+    });
+
+    localStorage.setItem(
+      "posts",
+      JSON.stringify(posts)
+    );
+
+    renderPosts();
+
+    document.getElementById("text")
+    .value = "";
+
+    document.getElementById("tags")
+    .value = "";
+
+    imageInput.value = "";
+  }
+
+}
+async function loadPosts(){
+
+  const response =
+  await fetch("/posts",{
+
+    headers:{
+      Authorization:"apictures123"
+    }
+
+  });
+
+  posts =
+  await response.json();
+
+  renderPosts();
+
+}
+/* POSTS */
+
+function renderPosts(){
+
+  const feed =
+  document.getElementById("feed");
+
+  feed.innerHTML = "";
+
+  posts
+.filter(post => post.user)
+.forEach(post=>{
+
+    const div =
+    document.createElement("div");
+
+    div.className =
+    "card post";
+
+    div.innerHTML = `
+
+      <div class="post-header">
+
+        <div>
+
+          <h3>
+            @${post.user}
+          </h3>
+
+          <div class="tags">
+            ${post.tags}
+          </div>
+
+        </div>
+
+        ${
+          post.user ===
+          currentUser.username
+
+          ?
+
+          `
+
+          <div class="post-menu">
+
+            <button
+            class="menu-btn"
+            onclick="
+            toggleMenu(event,this)
+            ">
+              ⋮
+            </button>
+
+            <div class="dropdown">
+
+              <button
+              onclick="
+              deletePost(${post.id})
+              ">
+                Eliminar
+              </button>
+
+            </div>
+
+          </div>
+
+          `
+
+          :
+
+          ""
+        }
+
+      </div>
+
+      <p>${post.text}</p>
+      <div style="
+margin-top:10px;
+display:flex;
+gap:10px;
+align-items:center;
+">
+
+<button
+onclick="likePost(${post.id})"
+style="
+width:auto;
+background:#ff4db8;
+padding:8px 14px;
+">
+❤️ ${post.likes || 0}
+</button>
+
+</div>
+
+      ${
+        post.image
+
+        ?
+
+        `
+        <img src="${post.image}">
+        `
+
+        :
+
+        ""
+      }
+
+    `;
+
+    feed.appendChild(div);
+
+  });
+
+}
+
+/* PERFIL USUARIO */
+
+function showProfile(username){
+
+  const feed =
+  document.getElementById("feed");
+
+  feed.innerHTML = "";
+
+  const userPosts =
+  posts.filter(
+    post => post.user === username
+  );
+
+  const profileHeader =
+  document.createElement("div");
+
+  profileHeader.className =
+  "card";
+
+  profileHeader.innerHTML = `
+
+    <h2 style="
+      color:#ff4db8;
+      margin-bottom:10px;
+    ">
+      @${username}
+    </h2>
+
+    <p>
+      Publicaciones:
+      ${userPosts.length}
+    </p>
+
+    <button
+    onclick="renderPosts()"
+    style="
+      margin-top:15px;
+      background:#0b4dbb;
+    ">
+      Volver al feed
+    </button>
+
+  `;
+
+  feed.appendChild(profileHeader);
+
+  if(userPosts.length === 0){
+
+    const empty =
+    document.createElement("div");
+
+    empty.className = "card";
+
+    empty.innerHTML = `
+      <p>
+        Este usuario no tiene publicaciones.
+      </p>
+    `;
+
+    feed.appendChild(empty);
+
+    return;
+  }
+
+  userPosts.forEach(post=>{
+
+    const div =
+    document.createElement("div");
+
+    div.className =
+    "card post";
+
+    div.innerHTML = `
+
+      <div class="post-header">
+
+        <div>
+
+          <h3>
+            @${post.user}
+          </h3>
+
+          <div class="tags">
+            ${post.tags || ""}
+          </div>
+
+        </div>
+
+      </div>
+
+      <p>
+        ${post.text || ""}
+      </p>
+
+      ${
+        post.image
+
+        ?
+
+        `
+        <img src="${post.image}">
+        `
+
+        :
+
+        ""
+      }
+
+    `;
+
+    feed.appendChild(div);
+
+  });
+
+}
+
+/* MENU */
+
+function toggleMenu(event,btn){
+
+  event.stopPropagation();
+
+  const menu =
+  btn.parentElement;
+
+  document
+  .querySelectorAll(".post-menu")
+  .forEach(m=>{
+
+    if(m !== menu){
+      m.classList.remove("active");
+    }
+
+  });
+
+  menu.classList.toggle("active");
+}
+
+window.addEventListener("click",()=>{
+
+  document
+  .querySelectorAll(".post-menu")
+  .forEach(menu=>{
+
+    menu.classList.remove("active");
+
+  });
+
+});
+
+
+/* ELIMINAR */
+/* LIKES */
+
+function likePost(id){
+
+  posts =
+  posts.map(post=>{
+
+    if(post.id === id){
+
+      post.likes =
+      (post.likes || 0) + 1;
+
+    }
+
+    return post;
+
+  });
+
+  renderPosts();
+
+}
+async function deletePost(id){
+
+  const response =
+  await fetch(`/posts/${id}`,{
+
+    method:"DELETE",
+
+    headers:{
+      Authorization:"apictures123"
+    }
+
+  });
+
+  if(!response.ok){
+
+    return alert(
+      "Error al eliminar"
+    );
+
+  }
+
+  loadPosts();
+
+}
+
+function deleteUser(username){
+
+  const confirmDelete =
+  confirm("¿Eliminar usuario?");
+
+  if(!confirmDelete){
+    return;
+  }
+
+  users =
+  users.filter(
+    user =>
+    user.username !== username
+  );
+
+  posts =
+  posts.filter(
+    post =>
+    post.user !== username
+  );
+
+  localStorage.setItem(
+    "users",
+    JSON.stringify(users)
+  );
+
+  localStorage.setItem(
+    "posts",
+    JSON.stringify(posts)
+  );
+
+  renderUsers();
+
+  renderPosts();
+
+}
+/* USUARIOS */
+
+function renderUsers(){
+
+  const usersList =
+  document.getElementById("usersList");
+
+  const search =
+  document.getElementById("userSearch")
+  .value.toLowerCase();
+
+  usersList.innerHTML = "";
+
+  users
+  .filter(user=>
+
+    user.username
+    .toLowerCase()
+    .includes(search)
+
+  )
+
+  .forEach(user=>{
+
+    const div =
+    document.createElement("div");
+
+    div.className =
+    "user-item";
+
+    div.innerHTML = `
+
+<div style="
+display:flex;
+justify-content:space-between;
+align-items:center;
+width:100%;
+">
+
+  <div>
+    <strong>
+      @${user.username}
+    </strong>
+  </div>
+
+  <div class="post-menu">
+
+    <button
+    class="menu-btn"
+    onclick="
+    toggleMenu(event,this)
+    ">
+      ⋮
+    </button>
+
+    <div class="dropdown">
+
+      <button
+      onclick="
+      event.stopPropagation();
+      deleteUser('${user.username}')
+      ">
+        Eliminar
+      </button>
+
+    </div>
+
+  </div>
+
+</div>
+
+`;
+
+    div.onclick = ()=>{
+
+      showProfile(
+        user.username
+      );
+
+    };
+
+    usersList.appendChild(div);
+
+  });
+
+}
+
+</script>
+</body>
+</html>
