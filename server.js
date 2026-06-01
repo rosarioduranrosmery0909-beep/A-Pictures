@@ -4,6 +4,7 @@ const multer = require('multer');
 const cors = require('cors');
 const sqlite3 = require('sqlite3').verbose();
 const crypto = require('crypto');
+const fs = require('fs');
 
 const app = express();
 // Security: Restrict CORS to localhost (development) or specific origins
@@ -20,7 +21,11 @@ app.use((req, res, next) => {
   next();
 });
 
-const db = new sqlite3.Database(path.join(__dirname, 'database.db'), err => {
+// Database path configuration: use env var or default to local database.db
+const dbPath = process.env.DATABASE_PATH || path.join(__dirname, 'database.db');
+console.log(`[DB] Using database at: ${dbPath}`);
+
+const db = new sqlite3.Database(dbPath, err => {
   if (err) {
     console.error('No se pudo abrir la base de datos', err);
     process.exit(1);

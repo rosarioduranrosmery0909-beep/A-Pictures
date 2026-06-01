@@ -28,9 +28,34 @@ La aplicación protege las rutas del servidor utilizando autorización mediante 
 
 ## Base de datos
 
-Se utiliza SQLite con el archivo:
+Se utiliza SQLite con el archivo `database.db` (local por defecto).
 
-database.db
+### Compartir base de datos entre múltiples máquinas
+
+Para que las publicaciones se sincronicen entre diferentes computadoras, usa una carpeta compartida de red:
+
+**En Windows:**
+1. Crea una carpeta compartida en tu red (ej: `\\SERVER\shared\apictures`)
+2. Configura la variable de entorno:
+   ```bash
+   set DATABASE_PATH=\\SERVER\shared\apictures\database.db
+   node server.js
+   ```
+3. En las otras máquinas, usa la misma variable de entorno
+
+**En Linux/Mac:**
+```bash
+export DATABASE_PATH=/mnt/network/shared/database.db
+node server.js
+```
+
+**Alternativa: Archivo .env local**
+```
+DATABASE_PATH=\\SERVER\shared\apictures\database.db
+```
+
+Una vez configurada, todos los clientes conectados a cualquier máquina verán las mismas publicaciones.
+
 
 ## Instalación
 
