@@ -5,6 +5,7 @@ let currentUser = JSON.parse(localStorage.getItem(STORAGE_USER_KEY));
 let authToken = localStorage.getItem(STORAGE_TOKEN_KEY);
 let posts = [];
 let users = [];
+let autoRefreshInterval = null;
 
 function getAuthHeaders() {
   return authToken ? { Authorization: `Bearer ${authToken}` } : {};
@@ -15,6 +16,9 @@ function showApp() {
   document.getElementById('app').style.display = 'block';
   loadUsers();
   loadPosts();
+  // Auto-refresh posts every 5 seconds
+  if (autoRefreshInterval) clearInterval(autoRefreshInterval);
+  autoRefreshInterval = setInterval(() => loadPosts(), 5000);
 }
 
 function logout() {
@@ -22,6 +26,7 @@ function logout() {
   localStorage.removeItem(STORAGE_TOKEN_KEY);
   currentUser = null;
   authToken = null;
+  if (autoRefreshInterval) clearInterval(autoRefreshInterval);
   location.reload();
 }
 
@@ -31,6 +36,14 @@ async function register() {
 
   if (!username || !password) {
     return alert('Completa usuario y contraseña');
+  }
+  
+  if (username.length < 3 || username.length > 32) {
+    return alert('El usuario debe tener entre 3 y 32 caracteres');
+  }
+  
+  if (password.length < 6) {
+    return alert('La contraseña debe tener al menos 6 caracteres');
   }
 
   try {
@@ -46,9 +59,10 @@ async function register() {
     }
 
     alert('Usuario registrado correctamente. Inicia sesión para continuar.');
+    document.getElementById('loginUser').value = '';
+    document.getElementById('loginPass').value = '';
   } catch (error) {
-    console.error(error);
-    alert('Error al registrar');
+    alert('Error de red al registrar');
   }
 }
 
@@ -131,8 +145,24 @@ async function addPost() {
   const tags = document.getElementById('tags').value.trim();
   const image = document.getElementById('imageInput').files[0];
 
-  if (!text || !image) {
-    return alert('Debes escribir una descripción y seleccionar una imagen');
+  if (!text) {
+    return alert('Debes escribir una descripción');
+  }
+  
+  if (text.length > 5000) {
+    return alert('El texto es demasiado largo (máximo 5000 caracteres)');
+  }
+  
+  if (!image) {
+    return alert('Debes seleccionar una imagen');
+  }
+  
+  if (!['image/jpeg', 'image/png', 'image/gif', 'image/webp'].includes(image.type)) {
+    return alert('Solo se permiten imágenes JPEG, PNG, GIF o WebP');
+  }
+  
+  if (image.size > 10 * 1024 * 1024) {
+    return alert('La imagen no debe exceder 10MB');
   }
 
   const formData = new FormData();
@@ -158,8 +188,7 @@ async function addPost() {
 
     loadPosts();
   } catch (error) {
-    console.error(error);
-    alert('Error al publicar');
+    alert('Error de red al publicar');
   }
 }
 
@@ -287,7 +316,9 @@ function viewProfile(username) {
         <small style="color:#94a3b8">${post.date}</small>
         <p style="margin-top:10px;white-space:pre-wrap;">${post.text}</p>
         ${post.image ? `<img src="${post.image}" alt="Imagen">` : ''}
-        <div style="margin-top:10px;">❤️ ${post.likes}</div>
+        <div style="margin-top:10px; display:flex; gap:10px; align-items:center;">
+          <button onclick="likePost(${post.id})" style="width:auto;background:#ff4db8;padding:10px 14px;border:none;border-radius:10px;color:white;">❤️ ${post.likes}</button>
+        </div>
       </div>
     `)
     .join('');

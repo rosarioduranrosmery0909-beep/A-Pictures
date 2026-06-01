@@ -6,10 +6,19 @@ const sqlite3 = require('sqlite3').verbose();
 const crypto = require('crypto');
 
 const app = express();
-app.use(cors());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// Security: Restrict CORS to localhost (development) or specific origins
+app.use(cors({ origin: process.env.CORS_ORIGIN || 'http://localhost:3000', credentials: true }));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
+// Security headers
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  next();
+});
 
 const db = new sqlite3.Database(path.join(__dirname, 'database.db'), err => {
   if (err) {
@@ -40,6 +49,11 @@ db.serialize(() => {
     likes INTEGER DEFAULT 0,
     createdAt INTEGER NOT NULL
   )`);
+  
+  // Clean up expired sessions on startup
+  db.run('DELETE FROM sessions WHERE expiresAt < ?', [Date.now()], (err) => {
+    if (err) console.error('[DB] Error cleaning sessions:', err);
+  });
 });
 
 // Detect posts table schema to remain compatible with older DB (user vs username, date vs createdAt)
@@ -58,6 +72,39 @@ function detectPostsSchema(callback) {
 
 // run detection at startup
 detectPostsSchema(()=>{});
+
+// Clean expired sessions every hour
+setInterval(() => {
+  db.run('DELETE FROM sessions WHERE expiresAt < ?', [Date.now()], (err) => {
+    if (err) console.error('[Cleanup] Error cleaning expired sessions:', err);
+  });
+}, 60 * 60 * 1000); // 1 hour
+
+// Utility: Sanitize HTML/XSS input
+function sanitizeInput(str) {
+  if (typeof str !== 'string') return str;
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;')
+    .trim();
+}
+
+// Utility: Validate password strength
+function validatePassword(password) {
+  if (!password || typeof password !== 'string') return { valid: false, error: 'Contraseña requerida' };
+  if (password.length < 6) return { valid: false, error: 'La contraseña debe tener al menos 6 caracteres' };
+  if (password.length > 128) return { valid: false, error: 'La contraseña es demasiado larga' };
+  return { valid: true };
+}
+
+// Utility: Validate image MIME type
+function validateImageMIME(mimeType) {
+  const allowed = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+  return allowed.includes(mimeType);
+}
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, 'uploads/'),
@@ -82,8 +129,15 @@ function verifyPassword(password, passwordHash) {
 function createSession(username) {
   const token = crypto.randomBytes(32).toString('hex');
   const expiresAt = Date.now() + 24 * 60 * 60 * 1000;
-  db.run('INSERT INTO sessions(token, username, expiresAt) VALUES(?,?,?)', [token, username, expiresAt]);
-  return token;
+  return new Promise((resolve, reject) => {
+    db.run('INSERT INTO sessions(token, username, expiresAt) VALUES(?,?,?)', [token, username, expiresAt], (err) => {
+      if (err) {
+        reject(err);
+      } else {
+        resolve(token);
+      }
+    });
+  }).catch(() => null); // Return null if error
 }
 
 function verifyToken(req, res, next) {
@@ -109,9 +163,20 @@ function verifyToken(req, res, next) {
 }
 
 app.post('/register', (req, res) => {
-  const { username, password } = req.body;
+  const username = sanitizeInput(req.body.username);
+  const password = req.body.password; // Don't sanitize passwords
+  
   if (!username || !password) {
     return res.status(400).json({ error: 'Usuario y contraseña requeridos' });
+  }
+  
+  if (username.length < 3 || username.length > 32) {
+    return res.status(400).json({ error: 'El usuario debe tener entre 3 y 32 caracteres' });
+  }
+  
+  const pwValidation = validatePassword(password);
+  if (!pwValidation.valid) {
+    return res.status(400).json({ error: pwValidation.error });
   }
 
   const passwordHash = hashPassword(password);
@@ -129,12 +194,13 @@ app.post('/register', (req, res) => {
 });
 
 app.post('/login', (req, res) => {
-  const { username, password } = req.body;
+  const username = sanitizeInput(req.body.username);
+  const password = req.body.password;
   if (!username || !password) {
     return res.status(400).json({ error: 'Usuario y contraseña requeridos' });
   }
 
-  db.get('SELECT passwordHash FROM users WHERE username = ?', [username], (err, row) => {
+  db.get('SELECT passwordHash FROM users WHERE username = ?', [username], async (err, row) => {
     if (err) {
       return res.status(500).json({ error: 'Error interno' });
     }
@@ -143,8 +209,15 @@ app.post('/login', (req, res) => {
       return res.status(401).json({ error: 'Usuario o contraseña incorrectos' });
     }
 
-    const token = createSession(username);
-    res.json({ success: true, token, username });
+    try {
+      const token = await createSession(username);
+      if (!token) {
+        return res.status(500).json({ error: 'No se pudo crear la sesión' });
+      }
+      res.json({ success: true, token, username });
+    } catch (err) {
+      res.status(500).json({ error: 'Error al crear la sesión' });
+    }
   });
 });
 
@@ -209,8 +282,6 @@ app.get('/posts', verifyToken, (req, res) => {
 
       const dateStr = new Date(ts).toISOString();
 
-      console.log('[GET /posts] id=', row.id, 'createdAt=', row.createdAt, 'image=', row.image, 'ts=', ts, 'dateStr=', dateStr);
-
       return {
         id: row.id,
         user: row.username,
@@ -228,12 +299,38 @@ app.get('/posts', verifyToken, (req, res) => {
 });
 
 app.post('/posts', verifyToken, upload.single('image'), (req, res) => {
-  const text = req.body.text || '';
-  const tags = req.body.tags || '';
-  const image = req.file ? '/uploads/' + req.file.filename : null;
-  const createdAt = Date.now();
+  const text = sanitizeInput((req.body.text || '').trim());
+  const tags = sanitizeInput((req.body.tags || '').trim());
+  
+  // Validation
+  if (!text || text.length === 0) {
+    return res.status(400).json({ error: 'El texto de la publicación es requerido' });
+  }
+  if (text.length > 5000) {
+    return res.status(400).json({ error: 'El texto es demasiado largo (máximo 5000 caracteres)' });
+  }
+  if (tags.length > 500) {
+    return res.status(400).json({ error: 'Las etiquetas son demasiado largas' });
+  }
 
-  console.log('[POST /posts] user=', req.user, 'body=', req.body, 'file=', req.file && { originalname: req.file.originalname, size: req.file.size });
+  // Validate image if uploaded
+  let image = null;
+  if (req.file) {
+    if (!validateImageMIME(req.file.mimetype)) {
+      // Delete invalid file
+      const fs = require('fs');
+      fs.unlink(req.file.path, () => {});
+      return res.status(400).json({ error: 'Formato de imagen no permitido. Use JPEG, PNG, GIF o WebP' });
+    }
+    if (req.file.size > 10 * 1024 * 1024) { // 10MB limit
+      const fs = require('fs');
+      fs.unlink(req.file.path, () => {});
+      return res.status(400).json({ error: 'La imagen es demasiado grande (máximo 10MB)' });
+    }
+    image = '/uploads/' + req.file.filename;
+  }
+
+  const createdAt = Date.now();
 
   // Choose insert column names depending on detected schema
   const userCol = postUserCol;
@@ -243,8 +340,7 @@ app.post('/posts', verifyToken, upload.single('image'), (req, res) => {
 
   db.run(sql, params, function (err) {
     if (err) {
-      console.error('[POST /posts] DB error:', err);
-      return res.status(500).json({ error: 'No se pudo crear la publicación', detail: err.message });
+      return res.status(500).json({ error: 'No se pudo crear la publicación' });
     }
 
     res.json({ success: true, id: this.lastID });
