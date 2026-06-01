@@ -1,491 +1,323 @@
-// ===== USUARIOS =====
-let users = JSON.parse(localStorage.getItem("apicturesUsers")) || [];
+﻿const STORAGE_USER_KEY = 'apictures_user';
+const STORAGE_TOKEN_KEY = 'apictures_token';
 
-function saveUsers(){
-  localStorage.setItem("apicturesUsers", JSON.stringify(users));
+let currentUser = JSON.parse(localStorage.getItem(STORAGE_USER_KEY));
+let authToken = localStorage.getItem(STORAGE_TOKEN_KEY);
+let posts = [];
+let users = [];
+
+function getAuthHeaders() {
+  return authToken ? { Authorization: `Bearer ${authToken}` } : {};
 }
 
-// ===== USUARIO ACTIVO (ARREGLADO) =====
-let currentUser = null;
-
-// ===== REGISTRO =====
-function register(){
-  const user = document.getElementById("loginUser").value.trim();
-  const pass = document.getElementById("loginPass").value.trim();
-
-  if(!user || !pass){
-    alert("Completa usuario y contraseña");
-    return;
-  }
-
-  const exists = users.find(u => u.user === user);
-
-  if(exists){
-    alert("Ese usuario ya existe");
-    return;
-  }
-
-  users.push({user, pass});
-  saveUsers();
-
-  alert("Usuario registrado correctamente");
+function showApp() {
+  document.getElementById('loginBox').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  loadUsers();
+  loadPosts();
 }
 
-// ===== LOGIN (ARREGLADO) =====
-function login(){
-  const user = document.getElementById("loginUser").value.trim();
-  const pass = document.getElementById("loginPass").value.trim();
-
-  if(!user || !pass){
-    alert("Completa todos los campos");
-    return;
-  }
-
-  const valid = users.find(u => u.user === user);
-
-  if(!valid){
-    alert("Usuario no encontrado");
-    return;
-  }
-
-  if(valid.pass !== pass){
-    alert("Contraseña incorrecta");
-    return;
-  }
-
-  currentUser = valid;
-
-  localStorage.setItem("ap_user", JSON.stringify(valid));
-
-  alert("Inicio de sesión exitoso");
-
-  document.getElementById("loginBox").style.display = "none";
-  document.getElementById("app").style.display = "block";
-
-  render();
-}
-
-// ===== CERRAR SESIÓN =====
-function logout(){
-  localStorage.removeItem("ap_user");
-
+function logout() {
+  localStorage.removeItem(STORAGE_USER_KEY);
+  localStorage.removeItem(STORAGE_TOKEN_KEY);
   currentUser = null;
-
-  alert("Sesión cerrada");
-
+  authToken = null;
   location.reload();
 }
 
-// ===== MANTENER SESIÓN (ARREGLADO) =====
-window.onload = function(){
-  const savedUser = localStorage.getItem("ap_user");
+async function register() {
+  const username = document.getElementById('loginUser').value.trim();
+  const password = document.getElementById('loginPass').value.trim();
 
-  if(savedUser){
-    currentUser = JSON.parse(savedUser);
-
-    document.getElementById("loginBox").style.display = "none";
-    document.getElementById("app").style.display = "block";
+  if (!username || !password) {
+    return alert('Completa usuario y contraseña');
   }
 
-  render();
+  try {
+    const response = await fetch('/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password })
+    });
+    const data = await response.json();
+
+    if (!response.ok) {
+      return alert(data.error || 'No se pudo registrar');
+    }
+
+    alert('Usuario registrado correctamente. Inicia sesión para continuar.');
+  } catch (error) {
+    console.error(error);
+    alert('Error al registrar');
+  }
 }
 
-// ===== POSTS =====
+async function login() {
+  const username = document.getElementById('loginUser').value.trim();
+  const password = document.getElementById('loginPass').value.trim();
 
-
-// ===== PUBLICAR (ARREGLADO) =====
-function addPost(){
-
-  if(!currentUser){
-    alert("Debes iniciar sesión");
-    return;
+  if (!username || !password) {
+    return alert('Completa usuario y contraseña');
   }
 
-  const user = currentUser.user;
-  const text = document.getElementById("text").value.trim();
-  const tagsInput = document.getElementById("tags").value.trim();
-  const file = document.getElementById("imageInput").files[0];
+  try {
+    const response = await fetch('/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password })
+    });
+    const data = await response.json();
 
-  if(!text){
-    alert("Debes escribir una descripción");
-    return;
+    if (!response.ok) {
+      return alert(data.error || 'Usuario o contraseña incorrectos');
+    }
+
+    currentUser = { username: data.username };
+    authToken = data.token;
+    localStorage.setItem(STORAGE_USER_KEY, JSON.stringify(currentUser));
+    localStorage.setItem(STORAGE_TOKEN_KEY, authToken);
+
+    showApp();
+  } catch (error) {
+    console.error(error);
+    alert('Error al iniciar sesión');
   }
-
-  if(!file){
-    alert("Debes seleccionar una imagen");
-    return;
-  }
-
-  async function addPost(){
-
-  if(!currentUser){
-    alert("Debes iniciar sesión");
-    return;
-  }
-
-  const text =
-  document.getElementById("text").value.trim();
-
-  const tags =
-  document.getElementById("tags").value.trim();
-
-  const image =
-  document.getElementById("imageInput").files[0];
-
-  if(!text || !image){
-    alert("Completa todos los campos");
-    return;
-  }
-
-  const formData =
-  new FormData();
-
-  formData.append(
-    "user",
-    currentUser.user
-  );
-
-  formData.append(
-    "text",
-    text
-  );
-
-  formData.append(
-    "tags",
-    tags
-  );
-
-  formData.append(
-    "image",
-    image
-  );
-
-  try{
-
-    const response =
-    await fetch(
-      "http://localhost:3000/posts",
-      {
-        method:"POST",
-
-        headers:{
-          Authorization:"Bearer apictures123"
-        },
-
-        body:formData
-      }
-    );
-
-    const data =
-    await response.json();
-
-    alert("Publicación creada correctamente");
-
-    document.getElementById("text").value = "";
-    document.getElementById("tags").value = "";
-    document.getElementById("imageInput").value = "";
-
-    render();
-
-  }catch(error){
-
-    console.log(error);
-
-    alert("Error al publicar");
-
-  }
-
 }
+
+async function loadUsers() {
+  if (!authToken) return;
+
+  try {
+    const response = await fetch('/users', {
+      headers: getAuthHeaders()
+    });
+
+    if (!response.ok) {
+      return handleAuthError(response);
+    }
+
+    users = await response.json();
+    renderUsers();
+  } catch (error) {
+    console.error(error);
+  }
 }
-posts = posts.filter(p => p.user);
 
-function render(){
+async function loadPosts() {
+  if (!authToken) return;
 
-  const feed = document.getElementById("feed");
+  try {
+    const response = await fetch('/posts', {
+      headers: getAuthHeaders()
+    });
 
-  if(!feed) return;
+    if (!response.ok) {
+      return handleAuthError(response);
+    }
 
-  feed.innerHTML = "";
+    posts = await response.json();
+    renderPosts();
+  } catch (error) {
+    console.error(error);
+  }
+}
 
-  if(!currentUser) return;
+async function addPost() {
+  if (!currentUser) {
+    return alert('Debes iniciar sesión');
+  }
 
-  posts.forEach(p => {
-    
+  const text = document.getElementById('text').value.trim();
+  const tags = document.getElementById('tags').value.trim();
+  const image = document.getElementById('imageInput').files[0];
 
-    feed.innerHTML += `
+  if (!text || !image) {
+    return alert('Debes escribir una descripción y seleccionar una imagen');
+  }
+
+  const formData = new FormData();
+  formData.append('text', text);
+  formData.append('tags', tags);
+  formData.append('image', image);
+
+  try {
+    const response = await fetch('/posts', {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: formData
+    });
+    const data = await response.json();
+
+    if (!response.ok) {
+      return alert(data.error || 'Error al publicar');
+    }
+
+    document.getElementById('text').value = '';
+    document.getElementById('tags').value = '';
+    document.getElementById('imageInput').value = '';
+
+    loadPosts();
+  } catch (error) {
+    console.error(error);
+    alert('Error al publicar');
+  }
+}
+
+async function deletePost(id) {
+  const confirmDelete = confirm('¿Seguro que deseas eliminar esta publicación?');
+  if (!confirmDelete) return;
+
+  try {
+    const response = await fetch(`/posts/${id}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders()
+    });
+
+    if (!response.ok) {
+      return alert('No se pudo eliminar la publicación');
+    }
+
+    loadPosts();
+  } catch (error) {
+    console.error(error);
+    alert('Error al eliminar');
+  }
+}
+
+async function likePost(id) {
+  try {
+    const response = await fetch(`/posts/${id}/like`, {
+      method: 'POST',
+      headers: getAuthHeaders()
+    });
+
+    if (!response.ok) {
+      return alert('No se pudo actualizar el like');
+    }
+
+    loadPosts();
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+function renderPosts(filteredPosts = posts) {
+  const feed = document.getElementById('feed');
+  if (!feed) return;
+
+  if (!currentUser) {
+    feed.innerHTML = '';
+    return;
+  }
+
+  if (!filteredPosts.length) {
+    feed.innerHTML = '<div class="card"><p>No hay publicaciones aún.</p></div>';
+    return;
+  }
+
+  feed.innerHTML = filteredPosts
+    .map(post => `
       <div class="card post">
-
-        <div style="display:flex;justify-content:space-between;align-items:center">
-          <div class="post-header">
-
-  <div>
-    <b>${p.user}</b><br>
-    <small style="color:#94a3b8">
-      ${p.date}
-    </small>
-  </div>
-
-  <div class="post-menu">
-
-    <button
-    class="menu-btn"
-    onclick="toggleMenu(event,this)">
-      ⋮
-    </button>
-
-    <div class="dropdown">
-
-      <button
-      onclick="deletePost(${p.id})">
-        Eliminar
-      </button>
-
-    </div>
-
-  </div>
-
-</div>
+        <div class="post-header" style="display:flex;justify-content:space-between;align-items:center;">
+          <div>
+            <b>${post.user}</b><br>
+            <small style="color:#94a3b8">${post.date}</small>
+          </div>
+          ${post.user === currentUser.username ? `
+            <div class="post-menu">
+              <button class="menu-btn" onclick="toggleMenu(event,this)">⋮</button>
+              <div class="dropdown">
+                <button onclick="deletePost(${post.id})">Eliminar</button>
+              </div>
+            </div>
+          ` : ''}
         </div>
 
-        <p style="margin-top:8px">${p.text}</p>
-
-        <div class="tags">
-          ${p.tags.map(t => "#" + t.trim()).join(" ")}
+        <p style="margin-top:12px;white-space:pre-wrap;">${post.text}</p>
+        <div class="tags">${post.tags.map(tag => '#' + tag).join(' ')}</div>
+        ${post.image ? `<img src="${post.image}" alt="Imagen">` : ''}
+        <div style="margin-top:10px; display:flex; gap:10px; align-items:center;">
+          <button onclick="likePost(${post.id})" style="width:auto;background:#ff4db8;padding:10px 14px;border:none;border-radius:10px;color:white;">❤️ ${post.likes}</button>
         </div>
-
-        <img src="${p.image}">
-
-        <div style="margin-top:10px">
-          ❤️ ${p.likes}
-        </div>
-
-        <button onclick="like(${p.id})">
-          Me gusta
-        </button>
-
-        <div class="post-menu">
-
-  <button
-  class="menu-btn"
-  onclick="toggleMenu(event,this)">
-    ⋮
-  </button>
-
-  <div class="dropdown">
-
-    <button
-    onclick="deletePost(${p.id})">
-      Eliminar
-    </button>
-
-  </div>
-
-</div>
-
-        <div style="margin-top:10px">
-          ${p.comments.map(c => `<div>• ${c}</div>`).join("")}
-        </div>
-
-        <input
-          placeholder="Escribe un comentario..."
-          onkeydown="if(event.key==='Enter'){addComment(${p.id},this.value);this.value=''}"
-        >
-
       </div>
-    `;
-  });
-
-  renderUsers();
+    `)
+    .join('');
 }
 
-// ===== LIKE =====
-function like(id){
+function renderUsers() {
+  const usersList = document.getElementById('usersList');
+  if (!usersList) return;
 
-  posts = posts.map(p => {
-    if(p.id === id){
-      p.likes++;
-    }
-    return p;
-  });
+  const search = document.getElementById('userSearch').value.toLowerCase();
+  const filteredUsers = users.filter(user => user.username.toLowerCase().includes(search));
 
-  savePosts();
-  render();
-}
-
-// ===== COMENTARIOS =====
-function addComment(id, value){
-
-  if(value.trim() === ""){
-    alert("Escribe un comentario");
-    return;
-  }
-
-  posts = posts.map(p => {
-    if(p.id === id){
-      p.comments.push(value);
-    }
-    return p;
-  });
-
-  savePosts();
-  render();
-}
-
-// ===== ELIMINAR =====
-function deletePost(id){
-
-  const confirmDelete = confirm("¿Seguro que deseas eliminar esta publicación?");
-
-  if(!confirmDelete) return;
-
-  posts = posts.filter(p => p.id !== id);
-
-  savePosts();
-
-  render();
-}
-
-// ===== USUARIOS =====
-function renderUsers(){
-
-  const usersList = document.getElementById("usersList");
-
-  if(!usersList) return;
-
-  const search = document.getElementById("userSearch").value.toLowerCase();
-
-  usersList.innerHTML = "";
-
-  const filteredUsers = users.filter(u =>
-    u.user.toLowerCase().includes(search)
-  );
-
-  filteredUsers.forEach(u => {
-
-    const totalPosts = posts.filter(p => p.user === u.user).length;
-
-    usersList.innerHTML += `
-      <div class="user-item">
-
-  <div onclick="viewProfile('${u.user}')">
-
-    <b>${u.user}</b><br>
-
-    <small>
-      ${totalPosts} publicaciones
-    </small>
-
-  </div>
-
-  <div class="post-menu">
-
-    <button
-    class="menu-btn"
-    onclick="toggleMenu(event,this)">
-      ⋮
-    </button>
-
-    <div class="dropdown">
-
-      <button
-      onclick="deleteUser('${u.user}')">
-        Eliminar
-      </button>
-
-    </div>
-
-  </div>
-
-</div>
-        <b>${u.user}</b><br>
-
-        <small>${totalPosts} publicaciones</small>
-
+  usersList.innerHTML = filteredUsers
+    .map(user => `
+      <div class="user-item" onclick="viewProfile('${user.username}')">
+        <div>
+          <strong>@${user.username}</strong><br>
+          <small>${user.totalPosts} publicaciones</small>
+        </div>
       </div>
-    `;
-  });
+    `)
+    .join('');
 }
 
-// ===== PERFIL =====
-function viewProfile(username){
-
-  const feed = document.getElementById("feed");
-
-  const userPosts = posts.filter(p => p.user === username);
+function viewProfile(username) {
+  const feed = document.getElementById('feed');
+  const userPosts = posts.filter(post => post.user === username);
 
   feed.innerHTML = `
     <div class="card">
       <h2>${username}</h2>
       <p>${userPosts.length} publicaciones</p>
-      <button onclick="render()">Volver al inicio</button>
+      <button onclick="renderPosts()" style="background:#0b4dbb;">Volver al feed</button>
     </div>
   `;
 
-  userPosts.forEach(p => {
+  if (!userPosts.length) {
+    feed.innerHTML += '<div class="card"><p>Este usuario no tiene publicaciones.</p></div>';
+    return;
+  }
 
-    feed.innerHTML += `
+  feed.innerHTML += userPosts
+    .map(post => `
       <div class="card post">
-        <b>${p.user}</b>
-        <small>${p.date}</small>
-        <p>${p.text}</p>
-        <img src="${p.image}">
-        ❤️ ${p.likes}
+        <div><b>@${post.user}</b></div>
+        <small style="color:#94a3b8">${post.date}</small>
+        <p style="margin-top:10px;white-space:pre-wrap;">${post.text}</p>
+        ${post.image ? `<img src="${post.image}" alt="Imagen">` : ''}
+        <div style="margin-top:10px;">❤️ ${post.likes}</div>
       </div>
-    `;
-  });
+    `)
+    .join('');
 }
 
-function deleteUser(username){
-
-  const confirmDelete = confirm("¿Seguro que deseas eliminar este usuario?");
-
-  if(!confirmDelete) return;
-
-  // eliminar usuario
-  users = users.filter(u => u.user !== username);
-
-  saveUsers();
-
-  // eliminar posts de ese usuario
-  posts = posts.filter(p => p.user !== username);
-
-  localStorage.setItem("apicturesPosts", JSON.stringify(posts));
-
-  alert("Usuario eliminado");
-
-  render();
-}
-
-/* MENU */
-
-function toggleMenu(event,btn){
-
+function toggleMenu(event, btn) {
   event.stopPropagation();
-
-  const menu =
-  btn.parentElement;
-
-  document
-  .querySelectorAll(".post-menu")
-  .forEach(m=>{
-
-    if(m !== menu){
-      m.classList.remove("active");
-    }
-
+  const menu = btn.parentElement;
+  document.querySelectorAll('.post-menu').forEach(m => {
+    if (m !== menu) m.classList.remove('active');
   });
-
-  menu.classList.toggle("active");
+  menu.classList.toggle('active');
 }
 
-window.addEventListener("click",()=>{
+window.addEventListener('click', () => {
+  document.querySelectorAll('.post-menu').forEach(menu => menu.classList.remove('active'));
+});
 
-  document
-  .querySelectorAll(".post-menu")
-  .forEach(menu=>{
+function handleAuthError(response) {
+  if (response.status === 401) {
+    alert('Tu sesión expiró. Inicia sesión nuevamente.');
+    logout();
+  }
+}
 
-    menu.classList.remove("active");
-
-  });
-
+window.addEventListener('DOMContentLoaded', () => {
+  if (currentUser && authToken) {
+    showApp();
+  } else {
+    document.getElementById('loginBox').style.display = 'block';
+    document.getElementById('app').style.display = 'none';
+  }
 });
